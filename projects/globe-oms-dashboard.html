@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central OMS — Quantum Oracle Dashboard</title>
+  <style>
+    /* ── CSS Variables ─────────────────────────── */
+    :root {
+      --bg: #0a0e17;
+      --panel-bg: rgba(10, 14, 23, 0.85);
+      --border: rgba(0, 212, 255, 0.25);
+      --glow: rgba(0, 212, 255, 0.4);
+      --text: #e0e6ed;
+      --text-dim: #6b7b8d;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --green: #10b981;
+      --orange: #f97316;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --cfg-color: #3b82f6;
+      --cds-color: #ef4444;
+      --cfr-color: #10b981;
+      --grab-color: #00b14f;
+      --shopee-color: #ee4d2d;
+      --mirakl-color: #7c3aed;
+      --font: 'Courier New', 'Consolas', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ── Globe Container ──────────────────────── */
+    #globe-container {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    /* ── HUD Panel Base ───────────────────────── */
+    .hud-panel {
+      position: fixed;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+      box-shadow:
+        0 0 15px rgba(0, 212, 255, 0.08),
+        inset 0 0 15px rgba(0, 212, 255, 0.03);
+      animation: panelFadeIn 0.8s ease-out;
+    }
+
+    @keyframes panelFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-title {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Top Banner ───────────────────────────── */
+    #top-banner {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
+      text-align: center;
+      padding: 12px 0;
+      background: linear-gradient(180deg, rgba(10,14,23,0.95) 0%, rgba(10,14,23,0) 100%);
+      pointer-events: none;
+    }
+
+    #top-banner h1 {
+      font-size: 14px;
+      letter-spacing: 6px;
+      color: var(--accent);
+      text-shadow: 0 0 20px var(--glow);
+      font-weight: 400;
+    }
+
+    #top-banner .subtitle {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* ── Left Panel — System Status ───────────── */
+    #left-panel {
+      top: 70px;
+      left: 20px;
+      width: 240px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-text {
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 1px;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .metric-value {
+      font-size: 13px;
+      color: var(--text);
+      font-weight: bold;
+    }
+
+    .metric-value.green { color: var(--green); }
+    .metric-value.orange { color: var(--orange); }
+    .metric-value.red { color: var(--red); }
+    .metric-value.blue { color: var(--blue); }
+
+    /* ── Divider ──────────────────────────────── */
+    .hud-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 12px 0;
+    }
+
+    /* ── Right Panel — Order Velocity ─────────── */
+    #right-panel {
+      top: 70px;
+      right: 20px;
+      width: 260px;
+    }
+
+    .sparkline-container {
+      height: 40px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      margin-bottom: 12px;
+    }
+
+    .spark-bar {
+      flex: 1;
+      background: var(--accent);
+      border-radius: 1px 1px 0 0;
+      opacity: 0.7;
+      transition: height 0.5s ease;
+    }
+
+    .bu-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .bu-label {
+      font-size: 10px;
+      width: 30px;
+      letter-spacing: 1px;
+    }
+
+    .bu-bar-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bu-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s ease;
+    }
+
+    .bu-pct {
+      font-size: 10px;
+      width: 35px;
+      text-align: right;
+      color: var(--text-dim);
+    }
+
+    /* ── Bottom Panel — Live Feed ─────────────── */
+    #bottom-panel {
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(700px, calc(100vw - 40px));
+      max-height: 160px;
+    }
+
+    .feed-list {
+      list-style: none;
+      max-height: 110px;
+      overflow: hidden;
+    }
+
+    .feed-item {
+      display: flex;
+      gap: 12px;
+      padding: 4px 0;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      animation: feedSlideIn 0.4s ease-out;
+    }
+
+    @keyframes feedSlideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .feed-time { color: var(--text-dim); white-space: nowrap; }
+    .feed-order { color: var(--accent); white-space: nowrap; }
+    .feed-status { white-space: nowrap; font-weight: bold; }
+    .feed-route { color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Status Legend (below left panel) ──────── */
+    #legend-panel {
+      left: 20px;
+      bottom: 200px;
+      width: 240px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-label {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    /* ── Right bottom — Marketplace ────────────── */
+    #marketplace-panel {
+      right: 20px;
+      bottom: 200px;
+      width: 260px;
+    }
+
+    .mkt-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .mkt-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .mkt-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .mkt-count {
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .mkt-rate {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    /* ── Scanline overlay ─────────────────────── */
+    #scanline {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.03) 0px,
+        rgba(0, 0, 0, 0.03) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+
+    /* ── Corner decorations ───────────────────── */
+    .corner {
+      position: fixed;
+      width: 30px; height: 30px;
+      z-index: 15;
+      pointer-events: none;
+    }
+    .corner-tl { top: 8px; left: 8px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+    .corner-tr { top: 8px; right: 8px; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+    .corner-bl { bottom: 8px; left: 8px; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+    .corner-br { bottom: 8px; right: 8px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+  </style>
+</head>
+<body>
+
+  <!-- Scanline overlay -->
+  <div id="scanline"></div>
+
+  <!-- Corner decorations -->
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <!-- Top Banner -->
+  <div id="top-banner">
+    <h1>CENTRAL OMS — QUANTUM ORACLE</h1>
+    <div class="subtitle">ORDER MANAGEMENT SYSTEM &bull; REAL-TIME VISUALIZATION &bull; <span id="clock"></span></div>
+  </div>
+
+  <!-- Globe -->
+  <div id="globe-container"></div>
+
+  <!-- Left Panel — System Status -->
+  <div class="hud-panel" id="left-panel">
+    <div class="panel-title">System Status</div>
+    <div class="status-indicator">
+      <div class="status-dot"></div>
+      <span class="status-text">SYSTEM ONLINE</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Orders Today</span>
+      <span class="metric-value" id="m-orders-today">0</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">In Transit</span>
+      <span class="metric-value orange" id="m-in-transit">0</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Delivered</span>
+      <span class="metric-value green" id="m-delivered">0</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Cancelled</span>
+      <span class="metric-value red" id="m-cancelled">0</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="metric-row">
+      <span class="metric-label">SLA Compliance</span>
+      <span class="metric-value green" id="m-sla">0%</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Avg Fulfillment</span>
+      <span class="metric-value" id="m-avg-fulfill">0h</span>
+    </div>
+  </div>
+
+  <!-- Right Panel — Order Velocity -->
+  <div class="hud-panel" id="right-panel">
+    <div class="panel-title">Order Velocity</div>
+    <div class="sparkline-container" id="sparkline"></div>
+    <div class="metric-row">
+      <span class="metric-label">Peak Hour</span>
+      <span class="metric-value" id="m-peak-hour">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Current Rate</span>
+      <span class="metric-value blue" id="m-current-rate">0/hr</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="bu-row">
+      <span class="bu-label" style="color:var(--cfg-color)">CFG</span>
+      <div class="bu-bar-track"><div class="bu-bar-fill" id="bar-cfg" style="background:var(--cfg-color);width:0%"></div></div>
+      <span class="bu-pct" id="pct-cfg">0%</span>
+    </div>
+    <div class="bu-row">
+      <span class="bu-label" style="color:var(--cds-color)">CDS</span>
+      <div class="bu-bar-track"><div class="bu-bar-fill" id="bar-cds" style="background:var(--cds-color);width:0%"></div></div>
+      <span class="bu-pct" id="pct-cds">0%</span>
+    </div>
+    <div class="bu-row">
+      <span class="bu-label" style="color:var(--cfr-color)">CFR</span>
+      <div class="bu-bar-track"><div class="bu-bar-fill" id="bar-cfr" style="background:var(--cfr-color);width:0%"></div></div>
+      <span class="bu-pct" id="pct-cfr">0%</span>
+    </div>
+  </div>
+
+  <!-- Legend Panel -->
+  <div class="hud-panel" id="legend-panel">
+    <div class="panel-title">Fulfillment Centers</div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--cfg-color);box-shadow:0 0 6px var(--cfg-color)"></div><span class="legend-label">CFG — Central Foodservice</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--cds-color);box-shadow:0 0 6px var(--cds-color)"></div><span class="legend-label">CDS — Central Dept Store</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--cfr-color);box-shadow:0 0 6px var(--cfr-color)"></div><span class="legend-label">CFR — Central Fresh Restaurant</span></div>
+    <div class="hud-divider"></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--grab-color)"></div><span class="legend-label">Grab Mart</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--shopee-color)"></div><span class="legend-label">Shopee</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--mirakl-color)"></div><span class="legend-label">Mirakl</span></div>
+  </div>
+
+  <!-- Marketplace Panel -->
+  <div class="hud-panel" id="marketplace-panel">
+    <div class="panel-title">Marketplace Channels</div>
+    <div class="mkt-row">
+      <div class="mkt-name"><div class="mkt-dot" style="background:var(--grab-color);box-shadow:0 0 6px var(--grab-color)"></div>Grab Mart</div>
+      <span class="mkt-count green" id="mkt-grab-count">0</span>
+      <span class="mkt-rate" id="mkt-grab-rate">0/hr</span>
+    </div>
+    <div class="mkt-row">
+      <div class="mkt-name"><div class="mkt-dot" style="background:var(--shopee-color);box-shadow:0 0 6px var(--shopee-color)"></div>Shopee</div>
+      <span class="mkt-count orange" id="mkt-shopee-count">0</span>
+      <span class="mkt-rate" id="mkt-shopee-rate">0/hr</span>
+    </div>
+    <div class="mkt-row">
+      <div class="mkt-name"><div class="mkt-dot" style="background:var(--mirakl-color);box-shadow:0 0 6px var(--mirakl-color)"></div>Mirakl</div>
+      <span class="mkt-count" style="color:var(--mirakl-color)" id="mkt-mirakl-count">0</span>
+      <span class="mkt-rate" id="mkt-mirakl-rate">0/hr</span>
+    </div>
+  </div>
+
+  <!-- Bottom Panel — Live Feed -->
+  <div class="hud-panel" id="bottom-panel">
+    <div class="panel-title">Live Order Feed</div>
+    <ul class="feed-list" id="feed-list"></ul>
+  </div>
+
+  <!-- Dependencies -->
+  <script src="https://unpkg.com/globe.gl@2.45.0/dist/globe.gl.min.js"></script>
+
+  <script>
+    // ─── OMS Data Model ──────────────────────────
+    const FULFILLMENT_CENTERS = [
+      { id: 'DC-BKK-01', name: 'Bangkok DC',       lat: 13.7563, lng: 100.5018, bu: 'CFG', capacity: 500 },
+      { id: 'DC-BKK-02', name: 'Bangkok Store',    lat: 13.7280, lng: 100.5240, bu: 'CDS', capacity: 300 },
+      { id: 'DC-CNX-01', name: 'Chiang Mai DC',    lat: 18.7883, lng: 98.9853,  bu: 'CFG', capacity: 200 },
+      { id: 'DC-CBR-01', name: 'Chonburi DC',      lat: 13.3611, lng: 100.9847, bu: 'CFR', capacity: 250 },
+      { id: 'DC-KKN-01', name: 'Khon Kaen DC',     lat: 16.4322, lng: 102.8236, bu: 'CFG', capacity: 150 },
+      { id: 'DC-SKA-01', name: 'Surat Thani DC',   lat: 9.1382,  lng: 99.3217,  bu: 'CFR', capacity: 180 },
+      { id: 'DC-NKR-01', name: 'Nakhon Ratchasima', lat: 14.9799, lng: 102.0978, bu: 'CDS', capacity: 160 },
+      { id: 'DC-PKT-01', name: 'Phuket Store',     lat: 7.8804,  lng: 98.3923,  bu: 'CDS', capacity: 120 },
+    ];
+
+    const CUSTOMER_CITIES = [
+      { name: 'Bangkok',         lat: 13.82, lng: 100.52 },
+      { name: 'Nonthaburi',      lat: 13.86, lng: 100.51 },
+      { name: 'Chiang Mai',      lat: 18.79, lng: 98.98  },
+      { name: 'Chiang Rai',      lat: 19.91, lng: 99.83  },
+      { name: 'Pattaya',         lat: 12.93, lng: 100.88 },
+      { name: 'Phuket',          lat: 7.88,  lng: 98.39  },
+      { name: 'Hat Yai',         lat: 7.00,  lng: 100.47 },
+      { name: 'Khon Kaen',       lat: 16.43, lng: 102.83 },
+      { name: 'Udon Thani',      lat: 17.42, lng: 102.79 },
+      { name: 'Nakhon Ratchasima', lat: 14.97, lng: 102.10 },
+      { name: 'Surat Thani',     lat: 9.14,  lng: 99.33  },
+      { name: 'Rayong',          lat: 12.68, lng: 101.28 },
+      { name: 'Hua Hin',         lat: 12.57, lng: 99.96  },
+      { name: 'Lampang',         lat: 18.29, lng: 99.49  },
+      { name: 'Ubon Ratchathani', lat: 15.25, lng: 104.85 },
+    ];
+
+    const ORDER_STATUSES = {
+      2000: { name: 'Allocated',    color: '#3b82f6', cssClass: 'blue'   },
+      3000: { name: 'Released',     color: '#6366f1', cssClass: 'blue'   },
+      7000: { name: 'Fulfilled',    color: '#f59e0b', cssClass: 'orange' },
+      7200: { name: 'In Transit',   color: '#f97316', cssClass: 'orange' },
+      7500: { name: 'Delivered',    color: '#10b981', cssClass: 'green'  },
+      9000: { name: 'Cancelled',    color: '#ef4444', cssClass: 'red'    },
+    };
+
+    const CHANNELS = [
+      { id: 'grab',   name: 'Grab Mart', color: '#00b14f' },
+      { id: 'shopee', name: 'Shopee',    color: '#ee4d2d' },
+      { id: 'mirakl', name: 'Mirakl',    color: '#7c3aed' },
+    ];
+
+    const BU_COLORS = { CFG: '#3b82f6', CDS: '#ef4444', CFR: '#10b981' };
+
+    // ─── State ───────────────────────────────────
+    let state = {
+      ordersToday: 847 + Math.floor(Math.random() * 400),
+      inTransit: 289 + Math.floor(Math.random() * 100),
+      delivered: 512 + Math.floor(Math.random() * 300),
+      cancelled: 28 + Math.floor(Math.random() * 20),
+      sla: 92 + Math.random() * 6,
+      avgFulfill: 1.8 + Math.random() * 1.5,
+      orderCounter: 7800 + Math.floor(Math.random() * 200),
+      arcsData: [],
+      sparkData: Array.from({ length: 24 }, () => 20 + Math.random() * 80),
+      channelCounts: { grab: 380, shopee: 320, mirakl: 147 },
+      buPct: { CFG: 72, CDS: 54, CFR: 38 },
+    };
+
+    // ─── Utilities ───────────────────────────────
+    function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function fmt(n) { return n.toLocaleString(); }
+    function nowStr() {
+      const d = new Date();
+      return d.toLocaleTimeString('th-TH', { hour12: false, timeZone: 'Asia/Bangkok' });
+    }
+
+    // ─── Clock ───────────────────────────────────
+    function updateClock() {
+      const el = document.getElementById('clock');
+      if (el) el.textContent = 'GMT+7 ' + nowStr();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ─── Initialize Globe ────────────────────────
+    const globeEl = document.getElementById('globe-container');
+
+    const myGlobe = Globe()
+      .globeImageUrl('https://unpkg.com/three-globe@2.45.0/example/img/earth-night.jpg')
+      .bumpImageUrl('https://unpkg.com/three-globe@2.45.0/example/img/earth-topology.png')
+      .backgroundImageUrl('https://unpkg.com/three-globe@2.45.0/example/img/night-sky.png')
+      .showAtmosphere(true)
+      .atmosphereColor('#00d4ff')
+      .atmosphereAltitude(0.2)
+      // Points — Fulfillment Centers
+      .pointsData(FULFILLMENT_CENTERS)
+      .pointLat(d => d.lat)
+      .pointLng(d => d.lng)
+      .pointAltitude(0.02)
+      .pointRadius(d => 0.3 + (d.capacity / 500) * 0.4)
+      .pointColor(d => BU_COLORS[d.bu])
+      .pointLabel(d => `<div style="font-family:monospace;background:rgba(10,14,23,0.9);color:#00d4ff;padding:8px 12px;border:1px solid rgba(0,212,255,0.3);border-radius:4px;font-size:12px">
+        <b>${d.id}</b><br/>
+        ${d.name}<br/>
+        BU: <span style="color:${BU_COLORS[d.bu]}">${d.bu}</span> &bull; Cap: ${d.capacity}/day
+      </div>`)
+      // Rings — pulse effect on FCs
+      .ringsData(FULFILLMENT_CENTERS)
+      .ringLat(d => d.lat)
+      .ringLng(d => d.lng)
+      .ringAltitude(0.015)
+      .ringColor(d => () => BU_COLORS[d.bu])
+      .ringMaxRadius(2.5)
+      .ringPropagationSpeed(1.5)
+      .ringRepeatPeriod(2000)
+      // Arcs — order flows
+      .arcsData(state.arcsData)
+      .arcStartLat(d => d.startLat)
+      .arcStartLng(d => d.startLng)
+      .arcEndLat(d => d.endLat)
+      .arcEndLng(d => d.endLng)
+      .arcColor(d => d.color)
+      .arcAltitudeAutoScale(0.4)
+      .arcStroke(0.4)
+      .arcDashLength(0.6)
+      .arcDashGap(0.3)
+      .arcDashAnimateTime(2000)
+      // Labels — customer cities (small dots)
+      .labelsData(CUSTOMER_CITIES)
+      .labelLat(d => d.lat)
+      .labelLng(d => d.lng)
+      .labelText(d => d.name)
+      .labelSize(0.6)
+      .labelDotRadius(0.15)
+      .labelColor(() => 'rgba(0, 212, 255, 0.6)')
+      .labelResolution(2)
+      .labelAltitude(0.005)
+      (globeEl);
+
+    // Camera focus on Thailand
+    myGlobe.pointOfView({ lat: 13.5, lng: 101, altitude: 1.8 }, 1500);
+
+    // Custom globe material
+    const globeMaterial = myGlobe.globeMaterial();
+    globeMaterial.bumpScale = 10;
+
+    // Slow auto-rotate
+    myGlobe.controls().autoRotate = true;
+    myGlobe.controls().autoRotateSpeed = 0.3;
+    myGlobe.controls().enableDamping = true;
+
+    // ─── Sparkline ───────────────────────────────
+    function renderSparkline() {
+      const container = document.getElementById('sparkline');
+      container.innerHTML = '';
+      const max = Math.max(...state.sparkData);
+      state.sparkData.forEach((v, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'spark-bar';
+        bar.style.height = (v / max * 100) + '%';
+        const hour = new Date();
+        hour.setHours(i);
+        if (i === new Date().getHours()) {
+          bar.style.background = '#00d4ff';
+          bar.style.opacity = '1';
+        }
+        container.appendChild(bar);
+      });
+    }
+
+    // ─── Update HUD ──────────────────────────────
+    function updateHUD() {
+      document.getElementById('m-orders-today').textContent = fmt(state.ordersToday);
+      document.getElementById('m-in-transit').textContent = fmt(state.inTransit);
+      document.getElementById('m-delivered').textContent = fmt(state.delivered);
+      document.getElementById('m-cancelled').textContent = fmt(state.cancelled);
+      document.getElementById('m-sla').textContent = state.sla.toFixed(1) + '%';
+      document.getElementById('m-avg-fulfill').textContent = state.avgFulfill.toFixed(1) + 'h';
+
+      const peakIdx = state.sparkData.indexOf(Math.max(...state.sparkData));
+      document.getElementById('m-peak-hour').textContent = String(peakIdx).padStart(2, '0') + ':00 GMT+7';
+      document.getElementById('m-current-rate').textContent = randInt(38, 68) + '/hr';
+
+      // BU bars
+      for (const bu of ['CFG', 'CDS', 'CFR']) {
+        const key = bu.toLowerCase();
+        document.getElementById('bar-' + key).style.width = state.buPct[bu] + '%';
+        document.getElementById('pct-' + key).textContent = state.buPct[bu] + '%';
+      }
+
+      // Marketplace
+      document.getElementById('mkt-grab-count').textContent = fmt(state.channelCounts.grab);
+      document.getElementById('mkt-shopee-count').textContent = fmt(state.channelCounts.shopee);
+      document.getElementById('mkt-mirakl-count').textContent = fmt(state.channelCounts.mirakl);
+      document.getElementById('mkt-grab-rate').textContent = randInt(15, 30) + '/hr';
+      document.getElementById('mkt-shopee-rate').textContent = randInt(12, 25) + '/hr';
+      document.getElementById('mkt-mirakl-rate').textContent = randInt(5, 15) + '/hr';
+    }
+
+    // ─── Generate Order Event ────────────────────
+    function generateOrder() {
+      const channel = rand(CHANNELS);
+      const dc = rand(FULFILLMENT_CENTERS);
+      const city = rand(CUSTOMER_CITIES);
+      const statusKeys = [2000, 3000, 7000, 7200, 7500, 9000];
+      const weights =    [0.10, 0.10, 0.10, 0.30, 0.30, 0.10];
+      const r = Math.random();
+      let cumulative = 0;
+      let statusCode = 7200;
+      for (let i = 0; i < weights.length; i++) {
+        cumulative += weights[i];
+        if (r < cumulative) { statusCode = statusKeys[i]; break; }
+      }
+      const status = ORDER_STATUSES[statusCode];
+
+      state.orderCounter++;
+      const orderId = 'ORD-' + state.orderCounter;
+
+      // Update state
+      state.ordersToday++;
+      if (statusCode === 7200) state.inTransit++;
+      if (statusCode === 7500) { state.delivered++; state.inTransit = Math.max(0, state.inTransit - 1); }
+      if (statusCode === 9000) state.cancelled++;
+      state.channelCounts[channel.id]++;
+
+      // BU shift
+      state.buPct[dc.bu] = Math.min(99, state.buPct[dc.bu] + Math.random() * 0.3);
+
+      // Add arc
+      const arc = {
+        startLat: dc.lat,
+        startLng: dc.lng,
+        endLat: city.lat,
+        endLng: city.lng,
+        color: [status.color + 'cc', status.color + '33'],
+        orderId,
+        timestamp: Date.now(),
+      };
+      state.arcsData.push(arc);
+
+      // Remove old arcs (keep last 30)
+      if (state.arcsData.length > 30) {
+        state.arcsData = state.arcsData.slice(-30);
+      }
+      myGlobe.arcsData(state.arcsData);
+
+      // Add feed item
+      addFeedItem(orderId, status, channel, dc, city);
+
+      // Update sparkline current hour
+      const currentHour = new Date().getHours();
+      state.sparkData[currentHour] = Math.min(100, state.sparkData[currentHour] + Math.random() * 2);
+    }
+
+    // ─── Feed ────────────────────────────────────
+    function addFeedItem(orderId, status, channel, dc, city) {
+      const list = document.getElementById('feed-list');
+      const li = document.createElement('li');
+      li.className = 'feed-item';
+      li.innerHTML = `
+        <span class="feed-time">${nowStr()}</span>
+        <span class="feed-order">${orderId}</span>
+        <span class="feed-status" style="color:${status.color}">${status.name.toUpperCase()}</span>
+        <span class="feed-route">${channel.name} → ${dc.id} → ${city.name}</span>
+      `;
+      list.insertBefore(li, list.firstChild);
+
+      // Keep max 8 items
+      while (list.children.length > 8) {
+        list.removeChild(list.lastChild);
+      }
+    }
+
+    // ─── Main Loop ───────────────────────────────
+    renderSparkline();
+    updateHUD();
+
+    // Generate initial arcs
+    for (let i = 0; i < 15; i++) generateOrder();
+
+    // Continuous order generation
+    setInterval(() => {
+      generateOrder();
+      updateHUD();
+    }, 2500);
+
+    // Sparkline refresh
+    setInterval(renderSparkline, 10000);
+
+    // SLA drift
+    setInterval(() => {
+      state.sla = Math.max(88, Math.min(99, state.sla + (Math.random() - 0.45) * 0.3));
+      state.avgFulfill = Math.max(1.2, Math.min(4.0, state.avgFulfill + (Math.random() - 0.5) * 0.1));
+    }, 5000);
+  </script>
+</body>
+</html>

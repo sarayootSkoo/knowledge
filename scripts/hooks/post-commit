@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# knowledge/scripts/hooks/post-commit
+# Template git hook — install per project via:
+#   bash knowledge/scripts/install-hooks.sh <project-name>
+# Or install everywhere:
+#   bash knowledge/scripts/install-hooks.sh --all
+
+KNOWLEDGE_ROOT="$(git rev-parse --show-toplevel)/../knowledge"
+CHANGED_FILES=$(git diff-tree --no-commit-id -r --name-only HEAD)
+
+# Trigger reminder when docs/ or CLAUDE.md were changed in this commit
+if echo "$CHANGED_FILES" | grep -qE "^(docs/|CLAUDE\.md)"; then
+  echo ""
+  echo "╔══════════════════════════════════════════════════╗"
+  echo "║  Knowledge Center Update Reminder                ║"
+  echo "║                                                  ║"
+  echo "║  docs/ or CLAUDE.md was modified in this commit ║"
+  echo "║  Please update the knowledge center:            ║"
+  echo "║                                                  ║"
+  echo "║  Option 1 (Script):                             ║"
+  echo "║    bash knowledge/scripts/scan-projects.sh      ║"
+  echo "║                                                  ║"
+  echo "║  Option 2 (Claude):                             ║"
+  echo "║    /update-knowledge                            ║"
+  echo "╚══════════════════════════════════════════════════╝"
+  echo ""
+fi

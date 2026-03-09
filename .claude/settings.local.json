@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm run build 2>&1 | tail -30)",
+      "Bash(pnpm run build 2>&1 | tail -20)",
+      "Bash(pnpm run build 2>&1 | tail -10)",
+      "Bash(pnpm run build 2>&1 | tail -25)",
+      "Bash(pnpm run build 2>&1 | grep -E \"error TS|warning|✓|build|Found\" | head -20)",
+      "Bash(pnpm run build 2>&1; echo \"EXIT:$?\")",
+      "Bash(grep -l \"mermaid\" /Users/grammer/Documents/git-central/oms-order/docs/*.md 2>/dev/null)",
+      "Bash(pnpm run build 2>&1 | grep -E \"error TS|warning|Error|✓|success\" | head -30)",
+      "Bash(pnpm run build 2>&1; echo \"EXIT_CODE: $?\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "azure-devops",
+    "firecrawl-mcp",
+    "mcp-atlassian",
+    "docs"
+  ],
+  "outputStyle": "Explanatory"
+}

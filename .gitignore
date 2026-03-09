@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+*.log
+
+# Embedded git repos (have their own repos)
+projects/knowledge-graph/
+projects/new-project/
+
+# Backup
+.git-gk-backup/
