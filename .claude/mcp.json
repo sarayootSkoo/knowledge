@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "docs": {
+      "command": "node",
+      "args": ["mcp-docs/index.mjs"],
+      "cwd": "/Users/grammer/Documents/git-central/knowledge"
+    },
+    "kanban": {
+      "command": "node",
+      "args": ["projects/knowledge-graph/mcp-kanban/index.mjs"],
+      "cwd": "/Users/grammer/Documents/git-central/knowledge"
+    }
+  }
+}

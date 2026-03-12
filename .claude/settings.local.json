@@ -6,7 +6,40 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "docs"
+    "docs",
+    "kanban"
   ],
-  "outputStyle": "Explanatory"
+  "outputStyle": "Explanatory",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs session-start"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs session-end"
+      }
+    ],
+    "postToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs file-changed"
+      }
+    ],
+    "subagentStart": [
+      {
+        "matcher": "",
+        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs agent-start"
+      }
+    ],
+    "subagentEnd": [
+      {
+        "matcher": "",
+        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs agent-end"
+      }
+    ]
+  }
 }
