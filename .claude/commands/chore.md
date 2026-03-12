@@ -165,6 +165,18 @@ pnpm run test -- --testPathPattern="relevant" 2>&1 | tail -20
 
 ---
 
+## Workflow
+When this command completes, include this section in your output:
+
+```
+## Workflow Output
+artifact_path: {path to created spec file}
+card_status: completed
+target_column: design
+suggested_next: /breakdown '{artifact_path}'
+mode: create
+```
+
 ## Report
 
 Return the path to the created spec file.

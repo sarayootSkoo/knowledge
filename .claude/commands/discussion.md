@@ -109,6 +109,18 @@ Path: `discussion/{section}-{datetime}.md`
 
 ---
 
+## Workflow
+When this command completes, include this section in your output:
+
+```
+## Workflow Output
+artifact_path: {path to discussion file}
+card_status: completed
+target_column: backlog
+suggested_next: /chore '{artifact_path}'
+mode: create
+```
+
 ## After Writing
 
 Report the file path and a 2-line summary of the discussion outcome:

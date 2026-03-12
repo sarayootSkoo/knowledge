@@ -112,6 +112,18 @@ Execute these commands to validate the feature is complete:
 ## Feature
 Use the feature description from the `prompt` variable.
 
+## Workflow
+When this command completes, include this section in your output:
+
+```
+## Workflow Output
+artifact_path: {path to created spec file}
+card_status: completed
+target_column: design
+suggested_next: /breakdown '{artifact_path}'
+mode: create
+```
+
 ## Report
 
 Return the path to the plan file created.

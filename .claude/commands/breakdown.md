@@ -100,3 +100,15 @@ Get current datetime: run `date '+%d_%m_%Y_%H_%M_%S'` — use result as `{dateti
 
 ## Notes for Tech Lead
 <items that require review, alignment, or decision>
+
+## Workflow
+When this command completes, include this section in your output:
+
+```
+## Workflow Output
+artifact_path: {path to created breakdown file}
+card_status: completed
+target_column: task
+suggested_next: /estimate '{artifact_path}'
+mode: create
+```

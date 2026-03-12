@@ -1,5 +1,8 @@
 # Dependencies
 node_modules/
+oms-order/
+mcp-docs/
+*
 
 # Build output
 dist/
@@ -15,6 +18,9 @@ dist/
 # Embedded git repos (have their own repos)
 projects/knowledge-graph/
 projects/new-project/
+
+# Claude memory files
+**/CLAUDE.md
 
 # Backup
 .git-gk-backup/

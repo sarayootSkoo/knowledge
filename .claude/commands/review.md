@@ -77,6 +77,18 @@ Execute these commands to validate the review is complete:
 ## review
 Use the review description from the `prompt` variable.
 
+## Workflow
+When this command completes, include this section in your output:
+
+```
+## Workflow Output
+artifact_path: {path to review report file}
+card_status: completed
+target_column: validate
+suggested_next: /validate
+mode: create
+```
+
 ## Report
 
 Return the path to the plan file created.

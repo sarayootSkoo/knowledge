@@ -4,7 +4,8 @@
   "type": "module",
   "main": "index.mjs",
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.mjs",
+    "test": "node --test lib.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",

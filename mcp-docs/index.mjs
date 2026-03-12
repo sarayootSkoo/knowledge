@@ -1,169 +1,113 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { readdirSync, readFileSync, statSync, realpathSync } from 'node:fs';
-import { resolve, join, relative, basename, extname } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildIndex, searchDocs, readDoc, listDocs, docStats } from './lib.mjs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const DOCS_DIR = resolve(__dirname, '../docs');
 
-// --- Helpers ---
-
-/** Recursively collect all .md files, following symlinks */
-function collectFiles(dir, files = []) {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return files;
-  }
-  for (const entry of entries) {
-    const full = join(dir, entry.name);
-    try {
-      const stat = statSync(full);
-      if (stat.isDirectory()) {
-        collectFiles(full, files);
-      } else if (stat.isFile() && extname(entry.name) === '.md') {
-        files.push(full);
-      }
-    } catch {
-      // broken symlink or permission error — skip
-    }
-  }
-  return files;
+/** Always-fresh docs index — rebuilds on each tool call */
+function getDocs() {
+  const start = Date.now();
+  const docs = buildIndex(DOCS_DIR);
+  console.error(`[docs-mcp] index rebuilt: ${docs.length} files in ${Date.now() - start}ms`);
+  return docs;
 }
 
-/** Build index once at startup */
-function buildIndex() {
-  const files = collectFiles(DOCS_DIR);
-  return files.map((filePath) => {
-    const rel = relative(DOCS_DIR, filePath);
-    const content = readFileSync(filePath, 'utf-8');
-    const firstLine = content.split('\n').find((l) => l.trim()) || '';
-    const title =
-      firstLine.startsWith('# ') ? firstLine.slice(2).trim() : basename(filePath, '.md');
-    return { path: rel, filePath, title, content };
-  });
-}
+// --- Zod Schemas ---
 
-const docs = buildIndex();
+const ResponseFormatSchema = z
+  .enum(['json', 'markdown'])
+  .default('json')
+  .describe("Output format: 'json' for structured data or 'markdown' for human-readable");
+
+const SearchInputSchema = z.object({
+  query: z.string().min(1).max(200).describe('Search keyword (e.g. "order", "kafka")'),
+  limit: z.number().int().min(1).max(50).default(10).describe('Max results (default: 10)'),
+  offset: z.number().int().min(0).default(0).describe('Skip N results for pagination'),
+  response_format: ResponseFormatSchema,
+}).strict();
+
+const ReadInputSchema = z.object({
+  path: z.string().min(1).describe('Relative path (e.g. "oms-order-docs/api.md"). Use docs_list to find paths.'),
+  offset: z.number().int().min(0).default(0).optional().describe('Start from line N (0-based)'),
+  limit: z.number().int().min(0).default(0).optional().describe('Read N lines (0 = all)'),
+}).strict();
+
+const ListInputSchema = z.object({
+  prefix: z.string().optional().describe('Filter by path prefix (e.g. "oms-order", "oms-webapp-specs")'),
+  limit: z.number().int().min(1).max(200).default(50).describe('Max results (default: 50)'),
+  offset: z.number().int().min(0).default(0).describe('Skip N results for pagination'),
+  response_format: ResponseFormatSchema,
+}).strict();
+
+const StatsInputSchema = z.object({
+  response_format: ResponseFormatSchema,
+}).strict();
 
 // --- MCP Server ---
 
 const server = new McpServer({
-  name: 'docs',
-  version: '1.0.0',
+  name: 'docs-mcp-server',
+  version: '2.0.0',
 });
 
-server.tool(
-  'search_docs',
-  'Search documentation by keyword. Returns matching file paths, titles, and line-level matches.',
+server.registerTool(
+  'docs_search',
   {
-    query: z.string().describe('Search keyword or phrase'),
-    limit: z.number().optional().default(20).describe('Max results (default 20)'),
+    title: 'Search Documentation',
+    description: 'Search docs by keyword. Returns matching files ranked by relevance with line-level matches. Supports pagination via limit/offset.',
+    inputSchema: SearchInputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
-  async ({ query, limit }) => {
-    const q = query.toLowerCase();
-    const results = [];
+  async ({ query, limit, offset, response_format }) => ({
+    content: [{ type: 'text', text: searchDocs(getDocs(), query, { limit, offset, format: response_format }) }],
+  }),
+);
 
-    for (const doc of docs) {
-      const lines = doc.content.split('\n');
-      const matches = [];
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].toLowerCase().includes(q)) {
-          matches.push({ line: i + 1, text: lines[i].trim().substring(0, 200) });
-        }
-      }
-      // Also match on path and title
-      const pathMatch = doc.path.toLowerCase().includes(q);
-      const titleMatch = doc.title.toLowerCase().includes(q);
-
-      if (matches.length > 0 || pathMatch || titleMatch) {
-        results.push({
-          path: doc.path,
-          title: doc.title,
-          matchCount: matches.length,
-          matches: matches.slice(0, 5),
-        });
-      }
+server.registerTool(
+  'docs_read',
+  {
+    title: 'Read Document',
+    description: 'Read a doc by path. Supports line range via offset/limit to read specific sections. Use docs_search to find paths first.',
+    inputSchema: ReadInputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  async ({ path: docPath, offset = 0, limit = 0 }) => {
+    const result = readDoc(getDocs(), docPath, { offset, limit });
+    if (result.error) {
+      return { isError: true, content: [{ type: 'text', text: result.message }] };
     }
-
-    // Sort by match count descending
-    results.sort((a, b) => b.matchCount - a.matchCount);
-
-    return {
-      content: [{ type: 'text', text: JSON.stringify(results.slice(0, limit), null, 2) }],
-    };
+    return { content: [{ type: 'text', text: result.content }] };
   },
 );
 
-server.tool(
-  'read_doc',
-  'Read the full content of a documentation file by its relative path.',
+server.registerTool(
+  'docs_list',
   {
-    path: z.string().describe('Relative path within docs/ (e.g. "oms-order-docs/api.md")'),
+    title: 'List Documents',
+    description: 'List docs filtered by prefix. Returns paths and titles with pagination. Use prefix to narrow by project (e.g. "oms-order-docs").',
+    inputSchema: ListInputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
-  async ({ path: docPath }) => {
-    const doc = docs.find((d) => d.path === docPath);
-    if (!doc) {
-      return {
-        content: [{ type: 'text', text: JSON.stringify({ error: 'Not found', path: docPath }) }],
-      };
-    }
-    return {
-      content: [{ type: 'text', text: doc.content }],
-    };
-  },
+  async ({ prefix, limit, offset, response_format }) => ({
+    content: [{ type: 'text', text: listDocs(getDocs(), { prefix, limit, offset, format: response_format }) }],
+  }),
 );
 
-server.tool(
-  'list_docs',
-  'List all documentation files, optionally filtered by directory prefix.',
+server.registerTool(
+  'docs_stats',
   {
-    prefix: z
-      .string()
-      .optional()
-      .describe('Filter by path prefix (e.g. "oms-order-specs")'),
+    title: 'Documentation Statistics',
+    description: 'Get doc stats: total files, lines, and file counts per directory.',
+    inputSchema: StatsInputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
-  async ({ prefix }) => {
-    let filtered = docs;
-    if (prefix) {
-      const p = prefix.toLowerCase();
-      filtered = docs.filter((d) => d.path.toLowerCase().startsWith(p));
-    }
-    const list = filtered.map((d) => ({ path: d.path, title: d.title }));
-    return {
-      content: [{ type: 'text', text: JSON.stringify(list, null, 2) }],
-    };
-  },
-);
-
-server.tool(
-  'doc_stats',
-  'Get documentation statistics: total files, files per directory, total lines.',
-  {},
-  async () => {
-    const dirs = {};
-    let totalLines = 0;
-    for (const doc of docs) {
-      const dir = doc.path.split('/')[0] || '(root)';
-      dirs[dir] = (dirs[dir] || 0) + 1;
-      totalLines += doc.content.split('\n').length;
-    }
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(
-            { totalFiles: docs.length, totalLines, directories: dirs },
-            null,
-            2,
-          ),
-        },
-      ],
-    };
-  },
+  async ({ response_format }) => ({
+    content: [{ type: 'text', text: docStats(getDocs(), { format: response_format }) }],
+  }),
 );
 
 // --- Start ---
@@ -171,6 +115,7 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  console.error('docs-mcp-server v2.0.0 running via stdio');
 }
 
 main().catch((err) => {

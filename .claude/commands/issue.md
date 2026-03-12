@@ -162,6 +162,18 @@ field = correct_value  ✅
 
 ---
 
+## Workflow
+When this command completes, include this section in your output:
+
+```
+## Workflow Output
+artifact_path: {path to created issue investigation file}
+card_status: completed
+target_column: task
+suggested_next: /chore '{artifact_path}'
+mode: create
+```
+
 ## Report
 
 Return:
