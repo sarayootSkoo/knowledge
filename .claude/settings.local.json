@@ -14,31 +14,45 @@
     "SessionStart": [
       {
         "matcher": "",
-        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs session-start"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node projects/knowledge-graph/scripts/kanban-hook.mjs session-start"
+          }
+        ]
       }
     ],
     "SessionEnd": [
       {
         "matcher": "",
-        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs session-end"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node projects/knowledge-graph/scripts/kanban-hook.mjs session-end"
+          }
+        ]
       }
     ],
-    "postToolUse": [
+    "PostToolUse": [
       {
         "matcher": "Write|Edit",
-        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs file-changed"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node projects/knowledge-graph/scripts/kanban-hook.mjs file-changed"
+          }
+        ]
       }
     ],
-    "subagentStart": [
+    "SubagentStart": [
       {
         "matcher": "",
-        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs agent-start"
-      }
-    ],
-    "subagentEnd": [
-      {
-        "matcher": "",
-        "hook": "node projects/knowledge-graph/scripts/kanban-hook.mjs agent-end"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node projects/knowledge-graph/scripts/kanban-hook.mjs agent-start"
+          }
+        ]
       }
     ]
   }
