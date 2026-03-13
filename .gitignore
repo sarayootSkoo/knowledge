@@ -2,6 +2,7 @@
 node_modules/
 oms-order/
 mcp-docs/
+.claude/*
 *
 
 # Build output
